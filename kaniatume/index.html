@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>おっさんが蟹を集める</title>
+  <style>
+    html,body{height:100%;margin:0;background:#0b1220;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Hiragino Kaku Gothic ProN',Meiryo;}
+    canvas{display:block;background:linear-gradient(#87ceeb,#b3ecff);width:100%;height:100vh;}
+    #ui{position:fixed;bottom:8px;left:0;right:0;display:flex;justify-content:center;gap:20px;}
+    .btn{width:80px;height:60px;border-radius:10px;background:rgba(255,255,255,0.2);font-size:24px;color:white;display:flex;align-items:center;justify-content:center;user-select:none;}
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="ui">
+    <div id="leftBtn" class="btn">◀</div>
+    <div id="rightBtn" class="btn">▶</div>
+  </div>
+
+  <script>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  let W,H,DPR=window.devicePixelRatio||1;
+  function resize(){canvas.width=innerWidth*DPR;canvas.height=innerHeight*DPR;W=canvas.width;H=canvas.height;}
+  window.addEventListener("resize",resize);resize();
+
+  // 画像読み込み
+  const ossanImg = new Image();
+  const crabImg = new Image();
+  ossanImg.src = "ossan.png";
+  crabImg.src = "kani.png";
+
+  let player = {x:0,y:0,w:96*DPR,h:96*DPR,speed:6*DPR,move:0};
+  let crabs = [];
+  let score=0;
+  let running=false;
+
+  function init(){
+    player.x = W/2 - player.w/2;
+    player.y = H - player.h - 30*DPR;
+    crabs = [];
+    score = 0;
+    running = true;
+  }
+
+  function spawnCrab(){
+    const w=64*DPR,h=64*DPR;
+    const x=Math.random()*(W-w);
+    const vy=3*DPR + Math.random()*2*DPR;
+    crabs.push({x,y:-h,w,h,vy});
+  }
+
+  function update(){
+    if(player.move<0) player.x-=player.speed;
+    if(player.move>0) player.x+=player.speed;
+    player.x=Math.max(0,Math.min(W-player.w,player.x));
+
+    // 蟹
+    for(let i=crabs.length-1;i>=0;i--){
+      const c=crabs[i];
+      c.y+=c.vy;
+      // 衝突
+      if(c.x<player.x+player.w && c.x+c.w>player.x && c.y<player.y+player.h && c.y+c.h>player.y){
+        crabs.splice(i,1);
+        score++;
+        continue;
+      }
+      // 地面に落ちた
+      if(c.y+c.h>H){ running=false; alert(`ゲームオーバー！スコア:${score}`); }
+    }
+    if(Math.random()<0.02) spawnCrab();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle="#6db96d";
+    ctx.fillRect(0,H-18*DPR,W,18*DPR);
+    if(ossanImg.complete) ctx.drawImage(ossanImg,player.x,player.y,player.w,player.h);
+    else {ctx.fillStyle="#ffcc99";ctx.fillRect(player.x,player.y,player.w,player.h);}
+    for(const c of crabs){
+      if(crabImg.complete) ctx.drawImage(crabImg,c.x,c.y,c.w,c.h);
+      else {ctx.fillStyle="#d94b4b";ctx.fillRect(c.x,c.y,c.w,c.h);}
+    }
+    ctx.font=`${24*DPR}px sans-serif`;
+    ctx.fillStyle="#fff";
+    ctx.fillText(`Score: ${score}`,20*DPR,40*DPR);
+  }
+
+  function loop(){
+    if(running) update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // 操作
+  const leftBtn=document.getElementById("leftBtn");
+  const rightBtn=document.getElementById("rightBtn");
+  leftBtn.addEventListener("touchstart",()=>player.move=-1);
+  leftBtn.addEventListener("touchend",()=>player.move=0);
+  rightBtn.addEventListener("touchstart",()=>player.move=1);
+  rightBtn.addEventListener("touchend",()=>player.move=0);
+
+  window.addEventListener("keydown",e=>{if(e.key==='ArrowLeft')player.move=-1;if(e.key==='ArrowRight')player.move=1;});
+  window.addEventListener("keyup",()=>player.move=0);
+
+  init();
+  </script>
+</body>
+</html>
